@@ -1,0 +1,42 @@
+Index: WebRequestOAuthProvider.cs
+===================================================================
+--- WebRequestOAuthProvider.cs	(revision 32542)
++++ WebRequestOAuthProvider.cs	(working copy)
+@@ -72,16 +72,33 @@
+ 		/// <summary>
+ 		/// Constructor for POST Form fields generation - usually for resending to a new destination inside a form redirect.
+ 		/// WARNING: This method scrubs OAuth fields out of the <paramref name="valuesToHash"/>. 
++		/// If you don't want to scrub them, see the other constructors.
+ 		/// </summary>
+ 		/// <param name="uriDestination">string - the URI destination to send the POST params to</param>
+ 		/// <param name="valuesToHash">NameValueCollection - zero or more name/value collections of values to include in signature hash. The original collections are not modified.</param>
+ 		public WebRequestOAuthProvider(string uriDestination, params NameValueCollection[] valuesToHash)
++			: this(uriDestination, true, valuesToHash)
+ 		{
++		}
++
++		public WebRequestOAuthProvider(string uriDestination, bool scrubOAuthValues, params NameValueCollection[] valuesToHash)
++		{
++			_baseURI = uriDestination;
+ 			_parameters = new NameValueCollection();
+-			valuesToHash.ToList().ForEach(values => 
+-				values.AllKeys.Where(x => !x.ToLower().Contains("oauth")).ToList()
+-				.ForEach(x => _parameters.Add(x, values[x])));
+-			_baseURI = uriDestination;
++
++			Func<string, bool> filter = x => true; //default to accept everything
++			if (scrubOAuthValues)
++			{
++				filter = x => !x.ToLower().Contains("oauth"); // nothing that contains the oauth moniker
++			}
++
++			valuesToHash.ToList().ForEach(values =>
++				values.AllKeys
++					.Where(filter)
++					.ToList()
++					.ForEach(x => _parameters.Add(x, values[x])
++				)
++			);
+ 		}
+ 
+ 		public WebRequestOAuthProvider(WebRequest webRequest, NameValueCollection formFields)
